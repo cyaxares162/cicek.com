@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>İsminden Buket</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,600;1,9..144,400&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#000;--ink:#f4f1fa;--muted:#9a97ab;--accent:#ff4f86;--chip:rgba(255,255,255,.09);color-scheme:dark;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{background:var(--bg);color:var(--ink);font-family:'Fraunces',Georgia,serif;display:flex;flex-direction:column;align-items:center;min-height:100svh}
+main{width:100%;max-width:760px;padding:24px 20px 80px;display:flex;flex-direction:column;align-items:center;flex:1;justify-content:center;text-align:center}
+footer{position:fixed;left:0;right:0;bottom:0;text-align:center;padding:12px 20px calc(16px + env(safe-area-inset-bottom,0px));color:var(--muted);font-size:.95rem;pointer-events:none}
+body.res footer{position:static}
+body.res main{padding-bottom:12px}
+[hidden]{display:none!important}
+h1{font-weight:400;font-size:clamp(2rem,8vw,3rem);line-height:1.1;margin:0 0 .5rem;letter-spacing:-.01em}
+p{color:var(--muted);margin:0 0 1.8rem;font-size:1.05rem;line-height:1.5}
+form{display:flex;flex-direction:column;gap:18px;width:100%;align-items:center}
+input{width:100%;max-width:380px;font:inherit;font-size:1.6rem;text-align:center;background:rgba(255,255,255,.12);border:1.5px solid rgba(255,255,255,.16);color:var(--ink);padding:14px 26px;border-radius:999px;transition:background .2s,border-color .2s}
+input::placeholder{color:var(--muted);opacity:.55;font-style:italic}
+input:focus{outline:none;background:rgba(255,255,255,.05);border-color:rgba(255,255,255,.1)}
+button{font:inherit;font-size:1.05rem;font-weight:600;background:var(--accent);color:#fff;border:0;border-radius:999px;padding:12px 28px;cursor:pointer}
+button.ghost{background:none;color:var(--ink);border:1.5px solid var(--muted)}
+.act{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin-top:22px}
+#snap{position:fixed;inset:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px;z-index:9;overflow:auto}#snap img{max-width:100%;max-height:68svh;border-radius:8px}
+button:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+#err{min-height:1.2em;color:var(--accent);font-size:.95rem;margin:0}
+svg.b{width:100%;max-width:700px;height:auto;overflow:visible}
+.stem{stroke-dasharray:1;stroke-dashoffset:1;animation:grow .6s ease-out forwards}
+.bloom{transform:scale(0) rotate(-50deg);animation:pop .7s cubic-bezier(.3,1.4,.5,1) forwards}
+.paper,.bow{opacity:0;animation:fade .6s ease forwards}
+@keyframes grow{to{stroke-dashoffset:0}}
+@keyframes pop{to{transform:scale(1) rotate(0)}}
+@keyframes fade{to{opacity:1}}
+.chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:8px}
+.chip{display:flex;align-items:center;gap:6px;background:var(--chip);border-radius:999px;padding:4px 12px 4px 4px;font-size:.9rem;opacity:0;animation:fade .5s ease forwards}
+.chip svg{width:30px;height:30px}
+.chip b{font-size:1.05rem}
+@media(prefers-reduced-motion:reduce){.stem,.bloom,.paper,.bow,.chip{animation:none;stroke-dashoffset:0;transform:none;opacity:1}}
+</style>
+</head>
+<body>
+<main>
+  <section id="ask">
+    <h1>Adın hangi çiçeklerden oluşuyor?</h1>
+    <p>Her harf ayrı bir çiçeğe dönüşür, hepsi bir buket olur.</p>
+    <form id="f" autocomplete="off">
+      <input id="name" maxlength="24" placeholder="Adını yaz" aria-label="Adın">
+      <p id="err" role="alert"></p>
+      <button type="submit">Buketimi yap</button>
+    </form>
+  </section>
+  <section id="show" hidden>
+    <p id="sub"></p>
+    <div id="art"></div>
+    <div class="chips" id="chips"></div>
+    <div class="act"><button id="save" type="button">Fotoğrafı indir</button><button class="ghost" id="again" type="button">Başka bir ad dene</button></div>
+  </section>
+</main>
+<footer>@kiyakser Akgöl</footer>
+<div id="dbg" hidden style="position:fixed;top:0;left:0;right:0;background:#7a1020;color:#fff;font:12px monospace;padding:6px 10px;z-index:99"></div>
+<div id="snap" hidden><img id="snapimg" alt="Buket fotoğrafı"><p>Görsele basılı tutarak galerine kaydedebilirsin.</p><button class="ghost" id="close" type="button">Kapat</button></div>
+<script>
+const ORDER="ABCÇDEFGĞHIİJKLMNOÖPRSŞTUÜVYZ";
+// harf|çiçek|yaprak sayısı|yaprak biçimi|dış renk|iç renk|orta
+const F=`Anemon|7|o|#6b4fc4|#a98be8|#1d1b2e
+Begonya|5|w|#f2788f|#f9b4c0|#f7d046
+Cam güzeli|5|h|#ff8fb1|#ffd0de|#fff2a8
+Çiğdem|6|p|#9b6ee0|#d9c2f5|#f5a623
+Dalya|14|p|#ff6a3d|#ffb08a|#ffd34d
+Erguvan|4|o|#c13584|#e68fc0|#ffe08a
+Frezya|6|p|#ffd23f|#fff0a0|#f28c28
+Gül|8|w|#d7263d|#f46a7b|#8c1226
+Sihirli çiçek|9|h|#2ec4b6|#9be8df|#ffffff
+Hatmi|5|w|#ff9bd2|#ffd9ee|#b3126f
+Ihlamur|12|t|#d8c94f|#f6efb0|#8aa83c
+İris|6|w|#3a54c9|#8fa5f5|#ffd23f
+Japon gülü|10|w|#ff5d8f|#ff9ebb|#ffd1dc
+Karanfil|14|h|#e63946|#ff8f99|#9d0f1f
+Lale|6|p|#f03e3e|#ff8787|#3b1d1d
+Menekşe|5|o|#7048e8|#b197fc|#ffd43b
+Nergis|6|p|#ffe066|#fff3bf|#f08c00
+Orkide|5|w|#e599f7|#f8d7ff|#c2255c
+Öküzgözü|20|t|#ffa94d|#ffe8cc|#7c4a1e
+Papatya|13|t|#ffffff|#f1f3f5|#fab005
+Ranunkulus|16|o|#ff922b|#ffd8a8|#e8590c
+Sümbül|8|p|#4dabf7|#a5d8ff|#1864ab
+Şakayık|12|w|#faa2c1|#ffdeeb|#fcc419
+Turna gagası|5|h|#e64980|#fcc2d7|#f8f9fa
+Unutma beni|5|o|#74c0fc|#d0ebff|#ffe066
+Üçgül|18|o|#be4bdb|#eebefa|#ffffff
+Vadi zambağı|6|o|#e6fcf5|#c3fae8|#12b886
+Yasemin|5|p|#fff3bf|#ffec99|#fcc419
+Zambak|6|p|#ff8787|#ffffff|#c92a2a`.split("\n").map(r=>{const a=r.split("|");return{name:a[0],n:+a[1],s:a[2],c1:a[3],c2:a[4],cc:a[5]}});
+
+const P=(s,L)=>{const w={o:.32,p:.2,t:.09,w:.55,h:.46}[s]*L,a=.25*L,b=.85*L;
+  if(s=="h")return `M0 0C${-w} ${-.2*L} ${-w} ${-.9*L} ${-.12*L} ${-.95*L}L0 ${-.8*L}L${.12*L} ${-.95*L}C${w} ${-.9*L} ${w} ${-.2*L} 0 0Z`;
+  return `M0 0C${-w} ${-a} ${-w} ${-b} 0 ${-L}C${w} ${-b} ${w} ${-a} 0 0Z`};
+const mix=(h,t,k)=>{const n=x=>parseInt(h.slice(x,x+2),16);return"#"+[1,3,5].map(x=>Math.round(n(x)+((t?255:0)-n(x))*k).toString(16).padStart(2,"0")).join("")};
+const stops=c=>`<stop offset="0" stop-color="${mix(c,1,.5)}"/><stop offset=".45" stop-color="${c}"/><stop offset="1" stop-color="${mix(c,0,.55)}"/>`;
+const rg=(id,c,a)=>`<radialGradient id="${id}" ${a}>${stops(c)}</radialGradient>`;
+document.body.insertAdjacentHTML("afterbegin",`<svg id="defs" width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${F.map((f,i)=>rg("p"+i+"a",f.c1,'cx=".5" cy=".3" r=".85" fx=".42" fy=".18"')+rg("p"+i+"b",f.c2,'cx=".5" cy=".3" r=".85" fx=".42" fy=".18"')+rg("p"+i+"c",f.cc,'cx=".35" cy=".35" r=".7"')).join("")}<linearGradient id="lf" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#6ad48f"/><stop offset="1" stop-color="#1f6b40"/></linearGradient></defs></svg>`);
+
+function flower(i){const f=F[i];let o="";
+  [[50,"a",0],[41,"b",180/f.n],[28,"a",90/f.n]].forEach(([L,g,r])=>{o+=`<circle r="${L*.45}" fill="rgba(0,0,0,.32)"/>`;
+    for(let k=0;k<f.n;k++)o+=`<path d="${P(f.s,L)}" fill="url(#p${i}${g})" stroke="rgba(0,0,0,.3)" stroke-width=".8" transform="rotate(${r+k*360/f.n})"/>`});
+  return o+`<circle r="9" fill="url(#p${i}c)" stroke="rgba(0,0,0,.35)"/>`}
+
+function bouquet(L,raw){
+  const n=L.length,A=Math.min(46,12+n*6),sc=n<4?1.25:n<8?1:.78,rows=[150,195,108],G="#3fae6a";
+  const it=L.map((c,k)=>{const th=((n==1?.5:k/(n-1))-.5)*2*A*Math.PI/180,R=n==1?200:rows[k%3];
+    return{i:ORDER.indexOf(c),k,th,R,x:200+R*Math.sin(th),y:372-R*Math.cos(th)}});
+  let s="",lv="",fl="";
+  it.forEach(o=>{const d=o.k*.45;
+    s+=`<path class="stem" pathLength="1" fill="none" stroke="${G}" stroke-width="3.5" stroke-linecap="round" style="animation-delay:${d}s" d="M200 372Q${200+(o.x-200)*.15} ${372-(372-o.y)*.6} ${o.x} ${o.y}"/>`;
+    if(o.k%2==0){const lx=200+(o.x-200)*.45,ly=372-(372-o.y)*.5,r=o.th*180/Math.PI+(o.th<0?-45:45);
+      lv+=`<ellipse class="bow" style="animation-delay:${d+.3}s" cx="${lx}" cy="${ly}" rx="7" ry="19" fill="url(#lf)" transform="rotate(${r} ${lx} ${ly})"/>`}});
+  [...it].sort((a,b)=>b.R-a.R).forEach(o=>{const dg=o.th*180/Math.PI;
+    fl+=`<g transform="translate(${o.x} ${o.y}) scale(${sc}) rotate(${dg}) scale(1,.84) rotate(${-dg})"><g class="bloom" style="animation-delay:${o.k*.45+.35}s">${flower(o.i)}</g></g>`});
+  const dl=n*.45+.3,sz=Math.max(26,Math.min(56,690/raw.length)),nm=raw.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+  return `<svg class="b" viewBox="0 24 400 452" role="img" aria-label="${nm} için çiçek buketi"><text x="200" y="84" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-style="italic" font-size="${sz}" fill="#ffffff">${nm}</text>${s}${lv}${fl}
+  <g class="paper" style="animation-delay:${dl}s"><path d="M92 322Q200 350 308 322L232 466Q200 476 168 466Z" fill="#d3ddcc" stroke="rgba(0,0,0,.25)"/><path d="M200 346L170 464M200 346L232 462" stroke="rgba(0,0,0,.14)" fill="none"/></g>
+  <g class="bow" style="animation-delay:${dl+.2}s" fill="#ff4f86"><path d="M200 356c-30-22-52-4-40 10 8 9 30 0 40-10zM200 356c30-22 52-4 40 10-8 9-30 0-40-10zM196 364l-18 46 14-6 8 14zM204 364l18 46-14-6-8 14z"/><rect x="191" y="347" width="18" height="18" rx="7"/></g></svg>`}
+
+const $=id=>document.getElementById(id);
+let cur="",dl=null;
+try{const u=window.claude&&window.claude.use&&window.claude.use("downloads");if(u&&u.then)u.then(d=>{dl=d},()=>{})}catch(e){}
+window.addEventListener("error",e=>{const d=$("dbg");d.textContent="Hata: "+e.message+" (satır "+e.lineno+")";d.hidden=false});
+$("f").addEventListener("submit",e=>{
+  e.preventDefault();
+  const raw=$("name").value.trim(),L=[...raw.toLocaleUpperCase("tr-TR")].filter(c=>ORDER.includes(c));
+  if(!L.length){$("err").textContent="Buket için en az bir harf yaz.";return}
+  $("err").textContent="";cur=raw;
+  $("sub").textContent=L.length+" harf, "+new Set(L).size+" farklı çiçek.";
+  $("art").innerHTML=bouquet(L,raw);
+  $("chips").innerHTML=L.map((c,k)=>{const i=ORDER.indexOf(c);
+    return `<div class="chip" style="animation-delay:${k*.45+.5}s"><svg viewBox="-52 -52 104 104">${flower(i)}</svg><b>${c}</b>${F[i].name}</div>`}).join("");
+  document.body.classList.add("res");$("ask").hidden=true;$("show").hidden=false;window.scrollTo(0,0);
+});
+$("again").addEventListener("click",()=>{document.body.classList.remove("res");$("show").hidden=true;$("ask").hidden=false;$("name").value="";$("name").focus()});
+$("close").addEventListener("click",()=>{$("snap").hidden=true});
+$("save").addEventListener("click",async()=>{
+  const W=1200,H=1356,s=$("art").querySelector("svg").cloneNode(true),fn=(cur.replace(/[^A-Za-z0-9ÇĞİÖŞÜçğıöşü]+/g,"-")||"buket")+"-buket";
+  s.setAttribute("xmlns","http://www.w3.org/2000/svg");s.setAttribute("width",W);s.setAttribute("height",H);
+  s.insertAdjacentHTML("afterbegin",$("defs").innerHTML+'<rect x="-100" y="-100" width="600" height="700" fill="#000"/>');
+  const xml=new XMLSerializer().serializeToString(s);
+  try{
+    const img=new Image();
+    await new Promise((r,j)=>{img.onload=r;img.onerror=()=>j(new Error("img"));img.src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml)});
+    const c=document.createElement("canvas");c.width=W;c.height=H;c.getContext("2d").drawImage(img,0,0,W,H);
+    $("snapimg").src=c.toDataURL("image/png");
+    if(dl){const blob=await new Promise(r=>c.toBlob(r,"image/png"));
+      try{await dl.save({filename:fn+".png",data:blob});return}catch(e){if(e&&e.code=="declined")return}}
+    $("snap").hidden=false;
+  }catch(err){
+    if(dl){try{await dl.save({filename:fn+".svg",data:xml})}catch(e){}}
+    else{$("snapimg").src="data:image/svg+xml;charset=utf-8,"+encodeURIComponent(xml);$("snap").hidden=false}
+  }
+});
+</script>
+</body>
+</html>
